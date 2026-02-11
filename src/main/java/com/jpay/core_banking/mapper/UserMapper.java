@@ -1,0 +1,23 @@
+package com.jpay.core_banking.mapper;
+
+import com.jpay.core_banking.dto.request.UserCreationRequest;
+import com.jpay.core_banking.dto.request.UserUpdateRequest;
+import com.jpay.core_banking.dto.response.UserResponse;
+import com.jpay.core_banking.entity.User;
+import com.jpay.core_banking.repository.UserRepository;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+
+import javax.swing.*;
+import java.util.List;
+
+// componentModel = "spring" -> Giúp Spring hiểu Mapper này là một Bean (có thể @Autowired được)
+@Mapper(componentModel = "spring")
+public interface UserMapper {
+    User toUser(UserCreationRequest request);
+
+    UserResponse toUserResponse(User user);
+
+    void updateUser(@MappingTarget User user, UserUpdateRequest request);
+}

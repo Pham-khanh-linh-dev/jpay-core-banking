@@ -1,0 +1,25 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /jpay # Sau này API sẽ là http://localhost:8080/jpay/users
+
+spring:
+  application:
+    name: Jpay Core Banking
+
+  datasource:
+    # Kết nối vào cổng 3307
+    url: jdbc:mysql://localhost:3307/jpay_db
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true # Hiện SQL để debug
+    properties:
+      hibernate:
+        format_sql: true
+jwt:
+  signerKey: "54321678901234567890123456789012"

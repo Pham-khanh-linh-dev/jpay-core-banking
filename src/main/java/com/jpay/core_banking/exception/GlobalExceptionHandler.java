@@ -1,0 +1,54 @@
+package com.jpay.core_banking.exception;
+
+import com.jpay.core_banking.dto.response.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+@Slf4j
+@ControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(value = AppException.class)
+    ResponseEntity<ApiResponse> handlingAppException(AppException appException){
+        ErrorCode errorCode = appException.getErrorCode();
+
+        ApiResponse apiResponse = new ApiResponse<>();
+        apiResponse.setCode(errorCode.getCode());
+        apiResponse.setMessage(errorCode.getMessage());
+
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+    ResponseEntity<ApiResponse> handlingMethodArgumentNotValidException(MethodArgumentNotValidException exception){
+        String enumkey = exception.getBindingResult().getFieldError().getDefaultMessage();
+
+        // Mặc định là lỗi INVALID_KEY nếu không tìm thấy key trong Enum
+        ErrorCode errorCode = ErrorCode.INVALID_KEY;
+        try{
+            errorCode = ErrorCode.valueOf(enumkey);
+        } catch(IllegalArgumentException e){
+            log.error("ErrorCode '{}' not define in Enum", enumkey);
+        }
+        ApiResponse apiResponse = new ApiResponse<>();
+        apiResponse.setCode(errorCode.getCode());
+        apiResponse.setMessage(errorCode.getMessage());
+
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+
+    // Bắt các lỗi còn lại (RuntimeException)
+    @ExceptionHandler(value = RuntimeException.class)
+    ResponseEntity<ApiResponse> handlingRuntimeException(RuntimeException exception) {
+        log.error("Exception chưa được phân loại: ", exception);
+
+        ApiResponse apiResponse = new ApiResponse();
+        apiResponse.setCode(ErrorCode.INVALID_KEY.getCode());
+        apiResponse.setMessage(ErrorCode.INVALID_KEY.getMessage()); // Hoặc exception.getMessage() nếu muốn hiện chi tiết
+
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+}

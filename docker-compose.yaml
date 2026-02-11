@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  jpay-mysql:
+    image: mysql:8.0
+    container_name: jpay-mysql-container
+    environment:
+      - MYSQL_DATABASE=jpay_db
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - jpay-network
+
+volumes:
+  mysql-data:
+
+networks:
+  jpay-network:
+    driver: bridge

@@ -1,0 +1,48 @@
+package com.jpay.core_banking.controller;
+
+import com.jpay.core_banking.dto.request.UserCreationRequest;
+import com.jpay.core_banking.dto.request.UserUpdateRequest;
+import com.jpay.core_banking.dto.response.ApiResponse;
+import com.jpay.core_banking.dto.response.UserResponse;
+import com.jpay.core_banking.entity.User;
+import com.jpay.core_banking.service.UserService;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import org.mapstruct.control.MappingControl;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/users")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public class UserController {
+    UserService userService;
+
+    @PostMapping
+    public ApiResponse<UserResponse> createUser(@RequestBody UserCreationRequest request){
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.createUser(request))
+                .build();
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<UserResponse> upateUser(@PathVariable String id, @RequestBody UserUpdateRequest request){
+        return ApiResponse.<UserResponse>builder().result(userService.updateUser(id, request)).build();
+    }
+
+    @GetMapping
+    public ApiResponse<List<UserResponse>> getAll(){
+        return ApiResponse.<List<UserResponse>>builder()
+                .result(userService.getAllUser())
+                .build();
+    }
+
+    @GetMapping("")
+    public ApiResponse<UserResponse> myInfo(){
+
+    }
+
+}
