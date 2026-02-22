@@ -3,10 +3,13 @@ package com.jpay.core_banking.service;
 import com.jpay.core_banking.dto.request.TransactionRequest;
 import com.jpay.core_banking.dto.request.TransferRequest;
 import com.jpay.core_banking.dto.response.WalletResponse;
+import com.jpay.core_banking.entity.TransactionHistory;
 import com.jpay.core_banking.entity.Wallet;
+import com.jpay.core_banking.enums.TransactionType;
 import com.jpay.core_banking.exception.AppException;
 import com.jpay.core_banking.exception.ErrorCode;
 import com.jpay.core_banking.mapper.WalletMapper;
+import com.jpay.core_banking.repository.TransactionHistoryRepository;
 import com.jpay.core_banking.repository.UserRepository;
 import com.jpay.core_banking.repository.WalletRepository;
 import lombok.AccessLevel;
@@ -23,6 +26,7 @@ public class WalletService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final WalletMapper walletMapper;
+    private final TransactionHistoryRepository transactionHistoryRepository;
 
     public WalletResponse getMyWallet(){
         var context = SecurityContextHolder.getContext();
@@ -43,6 +47,16 @@ public class WalletService {
         var wallet = walletRepository.findByUserForUpdate(user).orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
         wallet.setBalance(wallet.getBalance() + request.getAmount());
         walletRepository.save(wallet);
+
+        var transactionHistory = TransactionHistory.builder()
+                .wallet(wallet)
+                .amount(request.getAmount())
+                .message("Vua thuc hien giao dich nap tien")
+                .balanceAfter(wallet.getBalance())
+                .type(TransactionType.DEPOSIT)
+                .build();
+        transactionHistoryRepository.save(transactionHistory);
+
         return walletMapper.toWalletResponse(wallet);
     }
 
@@ -57,6 +71,15 @@ public class WalletService {
         if(wallet.getBalance() < request.getAmount()) throw new RuntimeException("So tien trong tai khoan khong du de rut");
         wallet.setBalance(wallet.getBalance() - request.getAmount());
         walletRepository.save(wallet);
+
+        var transactionHistory = TransactionHistory.builder()
+                .wallet(wallet)
+                .amount(request.getAmount())
+                .message("Vua thuc hien giao dich Rut tien")
+                .balanceAfter(wallet.getBalance())
+                .type(TransactionType.DEPOSIT)
+                .build();
+        transactionHistoryRepository.save(transactionHistory);
         return walletMapper.toWalletResponse(wallet);
     }
 
@@ -78,7 +101,24 @@ public class WalletService {
         received_wallet.setBalance(received_wallet.getBalance() + request.getAmount());
 
         walletRepository.save(sender_wallet);
+        var transactionHistorySender = TransactionHistory.builder()
+                .wallet(sender_wallet)
+                .amount(request.getAmount())
+                .message("Vua thuc hien giao dich Chuyen tien")
+                .balanceAfter(sender_wallet.getBalance())
+                .type(TransactionType.DEPOSIT)
+                .build();
+        transactionHistoryRepository.save(transactionHistorySender);
+
         walletRepository.save(received_wallet);
+        var transactionHistoryReceiver = TransactionHistory.builder()
+                .wallet(received_wallet)
+                .amount(request.getAmount())
+                .message("Vua thuc hien giao dich nap tien")
+                .balanceAfter(received_wallet.getBalance())
+                .type(TransactionType.DEPOSIT)
+                .build();
+        transactionHistoryRepository.save(transactionHistoryReceiver);
 
         return walletMapper.toWalletResponse(sender_wallet);
     }

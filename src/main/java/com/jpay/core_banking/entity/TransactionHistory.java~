@@ -1,0 +1,43 @@
+package com.jpay.core_banking.entity;
+
+import ch.qos.logback.core.boolex.EvaluationException;
+import com.jpay.core_banking.enums.TransactionType;
+import jakarta.annotation.Nullable;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+import java.time.LocalDate;
+
+@Entity
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "transaction_history")
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class TransactionHistory {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    String id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "wallet_id")
+    Wallet walletId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    TransactionType type;
+
+    @Column(nullable = false)
+    long amount;
+
+    @Column(nullable = false)
+    long balanceAfter;
+
+    String message;
+
+    @Builder.Default
+    LocalDate createdAt = LocalDate.now();
+
+}
