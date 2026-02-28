@@ -1,17 +1,15 @@
 package com.jpay.core_banking.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.constraints.Min;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.validation.annotation.Validated;
 
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class TransactionRequest {
-    @Min(value = 500, message = "AMOUNT_TOO_SMALL")
-    long amount;
+@JsonInclude(JsonInclude.Include.NON_NULL) // không hiện field nếu nó null
+public class LogoutRequest {
+    String token;
 }

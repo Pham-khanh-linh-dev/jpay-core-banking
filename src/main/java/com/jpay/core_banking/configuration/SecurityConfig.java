@@ -1,5 +1,6 @@
 package com.jpay.core_banking.configuration;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,38 +20,45 @@ import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     // public api
-    private final String[] PUBLIC_ENDPOINTS = {"/users", "/auth/token", "/auth/introspect", "/authen"};
+    private final String[] PUBLIC_ENDPOINTS = {"/users", "/auth/token", "/auth/introspect", "/authen/logout", "/authen/login"};
 
     @Value("${jwt.signerKey}")
     private String signerKey;
+
+    private final CustomJwtDecoder customJwtDecoder;
+
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(request ->
                 request.requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll() // post thif cho qua
                 .requestMatchers(HttpMethod.GET, PUBLIC_ENDPOINTS).permitAll() // post thif cho qua
-                        .anyRequest().authenticated());  // còn lại thì phải có token
+                        .anyRequest().authenticated())
+        ;  // còn lại thì phải có token
 
         httpSecurity.oauth2ResourceServer(oath2
-                -> oath2.jwt(jwtConfigurer
-                        -> jwtConfigurer.decoder(jwtDecoder())));
+                -> oath2.jwt(jwtConfigurer -> jwtConfigurer.decoder(customJwtDecoder))
+                .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
+        );
 
         // 2. Tắt CSRF không dùng Session nên không sợ tấn công này
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 
         return httpSecurity.build();
     }
-    @Bean
-    JwtDecoder jwtDecoder(){
-        SecretKeySpec secretKeySpec = new SecretKeySpec(signerKey.getBytes(), "HS256");
-
-        return NimbusJwtDecoder
-                .withSecretKey(secretKeySpec)
-                .macAlgorithm(MacAlgorithm.HS256)
-                .build();
-    }
+//    @Bean
+//    JwtDecoder jwtDecoder(){
+//        SecretKeySpec secretKeySpec = new SecretKeySpec(signerKey.getBytes(), "HS256");
+//
+//        return NimbusJwtDecoder
+//                .withSecretKey(secretKeySpec)
+//                .macAlgorithm(MacAlgorithm.HS256)
+//                .build();
+//    }
 
     @Bean
     public PasswordEncoder passwordEncoder(){

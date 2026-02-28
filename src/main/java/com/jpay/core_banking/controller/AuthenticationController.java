@@ -1,6 +1,7 @@
 package com.jpay.core_banking.controller;
 
 import com.jpay.core_banking.dto.request.AuthenticationRequest;
+import com.jpay.core_banking.dto.request.LogoutRequest;
 import com.jpay.core_banking.dto.response.ApiResponse;
 import com.jpay.core_banking.dto.response.AuthenticationResponse;
 import com.jpay.core_banking.service.AuthenticationService;
@@ -19,10 +20,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthenticationController {
     AuthenticationService authenticationService;
 
-    @PostMapping
+    @PostMapping("/login")
     public ApiResponse<AuthenticationResponse> login(@RequestBody AuthenticationRequest request){
         return ApiResponse.<AuthenticationResponse>builder()
                 .result(authenticationService.authenticate(request))
+                .build();
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@RequestBody LogoutRequest request){
+        authenticationService.logout(request);
+        return ApiResponse.<Void>builder()
                 .build();
     }
 

@@ -83,7 +83,7 @@ public class AuthenticationService {
 
 
             invalidatedTokenRepository.save(InvalidatedToken.builder()
-                    .jit(jit)
+                    .token(jit)
                     .expireTime(expireTime)
                     .build());
         } catch(AppException | ParseException e){

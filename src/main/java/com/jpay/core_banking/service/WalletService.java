@@ -2,12 +2,15 @@ package com.jpay.core_banking.service;
 
 import com.jpay.core_banking.dto.request.TransactionRequest;
 import com.jpay.core_banking.dto.request.TransferRequest;
+import com.jpay.core_banking.dto.response.TransactionHistoryResponse;
 import com.jpay.core_banking.dto.response.WalletResponse;
 import com.jpay.core_banking.entity.TransactionHistory;
+import com.jpay.core_banking.entity.User;
 import com.jpay.core_banking.entity.Wallet;
 import com.jpay.core_banking.enums.TransactionType;
 import com.jpay.core_banking.exception.AppException;
 import com.jpay.core_banking.exception.ErrorCode;
+import com.jpay.core_banking.mapper.TransactionHistoryMapper;
 import com.jpay.core_banking.mapper.WalletMapper;
 import com.jpay.core_banking.repository.TransactionHistoryRepository;
 import com.jpay.core_banking.repository.UserRepository;
@@ -19,6 +22,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -27,6 +33,7 @@ public class WalletService {
     private final WalletRepository walletRepository;
     private final WalletMapper walletMapper;
     private final TransactionHistoryRepository transactionHistoryRepository;
+    private final TransactionHistoryMapper transactionHistoryMapper;
 
     public WalletResponse getMyWallet(){
         var context = SecurityContextHolder.getContext();
@@ -77,7 +84,7 @@ public class WalletService {
                 .amount(request.getAmount())
                 .message("Vua thuc hien giao dich Rut tien")
                 .balanceAfter(wallet.getBalance())
-                .type(TransactionType.DEPOSIT)
+                .type(TransactionType.WITHDRAW)
                 .build();
         transactionHistoryRepository.save(transactionHistory);
         return walletMapper.toWalletResponse(wallet);
@@ -106,7 +113,7 @@ public class WalletService {
                 .amount(request.getAmount())
                 .message("Vua thuc hien giao dich Chuyen tien")
                 .balanceAfter(sender_wallet.getBalance())
-                .type(TransactionType.DEPOSIT)
+                .type(TransactionType.TRANSFER_OUT)
                 .build();
         transactionHistoryRepository.save(transactionHistorySender);
 
@@ -114,13 +121,31 @@ public class WalletService {
         var transactionHistoryReceiver = TransactionHistory.builder()
                 .wallet(received_wallet)
                 .amount(request.getAmount())
-                .message("Vua thuc hien giao dich nap tien")
+                .message("Vua nhan tien")
                 .balanceAfter(received_wallet.getBalance())
-                .type(TransactionType.DEPOSIT)
+                .type(TransactionType.TRANSFER_IN)
                 .build();
         transactionHistoryRepository.save(transactionHistoryReceiver);
 
         return walletMapper.toWalletResponse(sender_wallet);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TransactionHistoryResponse> myTransferHistory(){
+        var user = currentUser();
+        var wallet = walletRepository.findByUser(user).orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
+
+        var transactionHistory = transactionHistoryRepository.findByWalletOrderByCreatedAt(wallet);
+        return transactionHistoryMapper.toTransactionResponse(transactionHistory);
+    }
+
+    public User currentUser(){
+        var context = SecurityContextHolder.getContext();
+        var username = context.getAuthentication().getName();
+        var user = userRepository.findByUsername(username).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+        var wallet = walletRepository.findByUserForUpdate(user).orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
+
+        return user;
     }
 
 }
