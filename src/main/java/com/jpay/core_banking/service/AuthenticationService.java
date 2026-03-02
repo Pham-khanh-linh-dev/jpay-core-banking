@@ -2,6 +2,7 @@ package com.jpay.core_banking.service;
 
 import com.jpay.core_banking.dto.request.AuthenticationRequest;
 import com.jpay.core_banking.dto.request.LogoutRequest;
+import com.jpay.core_banking.dto.request.RefreshRequest;
 import com.jpay.core_banking.dto.response.AuthenticationResponse;
 import com.jpay.core_banking.entity.InvalidatedToken;
 import com.jpay.core_banking.entity.User;
@@ -11,6 +12,7 @@ import com.jpay.core_banking.repository.InvalidatedTokenRepository;
 import com.jpay.core_banking.repository.UserRepository;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.AccessLevel;
@@ -39,7 +41,11 @@ public class AuthenticationService {
 
     @NonFinal
     @Value("${jwt.signerKey}")
-    protected String signerKey;
+    private String signerKey;
+
+    @NonFinal
+    @Value("${jwt.refreshable-duration}")
+    private long REFRESHABLE_DURATION;
 
     public AuthenticationResponse authenticate(AuthenticationRequest request){
         System.out.println(request.getUsername());
@@ -57,7 +63,8 @@ public class AuthenticationService {
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
                 .subject(user.getUsername())
                 .issuer("jpay.com")
-                .issueTime(new Date(
+                .issueTime(new Date())
+                .expirationTime(new Date(
                         Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()
                 ))
                 .claim("userID", user.getId())
@@ -76,7 +83,7 @@ public class AuthenticationService {
 
     public void logout(LogoutRequest request){
         try{
-            SignedJWT signedJWT = SignedJWT.parse(request.getToken());
+            SignedJWT signedJWT = verifyToken(request.getToken(), true);
 
             String jit = signedJWT.getJWTClaimsSet().getJWTID();
             Date expireTime = signedJWT.getJWTClaimsSet().getExpirationTime();
@@ -86,10 +93,52 @@ public class AuthenticationService {
                     .jit(jit)
                     .expireTime(expireTime)
                     .build());
-        } catch(AppException | ParseException e){
+        } catch(AppException | ParseException | JOSEException e){
             throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
         }
     }
+
+    public SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
+        JWSVerifier verifier = new MACVerifier(signerKey.getBytes());
+
+        SignedJWT signedJWT = SignedJWT.parse(token);
+
+        if(!signedJWT.verify(verifier)) throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
+
+        Date expireTime = (isRefresh)
+                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS).toEpochMilli())
+                : signedJWT.getJWTClaimsSet().getExpirationTime();
+
+        if(expireTime.before(new Date())) throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
+
+        if(invalidatedTokenRepository.existsByJit(signedJWT.getJWTClaimsSet().getJWTID())) throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
+
+        return signedJWT;
+    }
+
+    public AuthenticationResponse refreshToken(RefreshRequest request) throws ParseException, JOSEException {
+        SignedJWT signedJWT = verifyToken(request.getToken(), true);
+
+        String jit = signedJWT.getJWTClaimsSet().getJWTID();
+        Date expireTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+        var invalidatedToken = InvalidatedToken.builder()
+                .jit(jit)
+                .expireTime(expireTime)
+                .build();
+
+        var user = userRepository.findByUsername(signedJWT.getJWTClaimsSet().getSubject()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+        invalidatedTokenRepository.save(invalidatedToken);
+
+        return AuthenticationResponse.builder()
+                .authenticated(true)
+                .token(generateToken(user))
+                .build();
+    }
+
+
+
+
+
 
 
 

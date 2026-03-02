@@ -2,9 +2,11 @@ package com.jpay.core_banking.controller;
 
 import com.jpay.core_banking.dto.request.AuthenticationRequest;
 import com.jpay.core_banking.dto.request.LogoutRequest;
+import com.jpay.core_banking.dto.request.RefreshRequest;
 import com.jpay.core_banking.dto.response.ApiResponse;
 import com.jpay.core_banking.dto.response.AuthenticationResponse;
 import com.jpay.core_banking.service.AuthenticationService;
+import com.nimbusds.jose.JOSEException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.text.ParseException;
 
 @RestController
 @RequestMapping("/authen")
@@ -31,6 +35,13 @@ public class AuthenticationController {
     public ApiResponse<Void> logout(@RequestBody LogoutRequest request){
         authenticationService.logout(request);
         return ApiResponse.<Void>builder()
+                .build();
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthenticationResponse> logout(@RequestBody RefreshRequest request) throws ParseException, JOSEException {
+        authenticationService.refreshToken(request);
+        return ApiResponse.<AuthenticationResponse>builder()
                 .build();
     }
 

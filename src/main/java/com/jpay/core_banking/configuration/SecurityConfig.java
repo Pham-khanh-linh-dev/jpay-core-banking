@@ -24,7 +24,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class SecurityConfig {
 
     // public api
-    private final String[] PUBLIC_ENDPOINTS = {"/users", "/auth/token", "/auth/introspect", "/authen/logout", "/authen/login"};
+    private final String[] PUBLIC_ENDPOINTS = {"/users", "/auth/token", "/auth/introspect", "/authen/logout", "/authen/login", "authen/refresh"};
 
     @Value("${jwt.signerKey}")
     private String signerKey;
@@ -36,7 +36,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(request ->
                 request.requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll() // post thif cho qua
-                .requestMatchers(HttpMethod.GET, PUBLIC_ENDPOINTS).permitAll() // post thif cho qua
+                .requestMatchers(HttpMethod.GET, PUBLIC_ENDPOINTS).permitAll() // get thif cho qua
                         .anyRequest().authenticated())
         ;  // còn lại thì phải có token
 
