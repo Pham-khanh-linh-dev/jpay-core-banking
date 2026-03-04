@@ -1,36 +1,54 @@
 name: JPay CI Pipeline
 
-# 1. KHI NÀO ROBOT CHẠY?
-# Robot sẽ kích hoạt mỗi khi có code mới được Push hoặc tạo Pull Request vào nhánh 'main'
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-# 2. ROBOT SẼ LÀM GÌ?
 jobs:
   build-and-test:
     name: Build & Run Unit Tests
-    runs-on: ubuntu-latest # Thuê một máy ảo dùng hệ điều hành Linux (Ubuntu) mới nhất
+    runs-on: ubuntu-latest
+
+    # GIẢI PHÁP 1: TẠO DATABASE ẢO CHO MÔI TRƯỜNG TEST
+    # GitHub sẽ tự động kéo image MySQL về và chạy song song với code của bạn
+    services:
+      mysql-test-db:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: jpay_db
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          # Ép ra cổng 3306 trên máy ảo của GitHub
+          - 3306:3306
+        # Chờ MySQL khởi động hoàn toàn xong mới cho chạy các bước tiếp theo
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
-      # Bước 1: Kéo toàn bộ source code của bạn từ GitHub về máy ảo này
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Bước 2: Cài đặt môi trường Java 21 lên máy ảo
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'temurin' # Bản Java chuẩn như file Dockerfile của ta
-          cache: maven # Lưu bộ nhớ đệm thư viện để lần sau chạy nhanh hơn
+          distribution: 'temurin'
+          cache: maven
 
-      # Bước 3: Ra lệnh cho Maven chạy toàn bộ Unit Test (WalletServiceTest...)
+      # GIẢI PHÁP 2: BƠM BIẾN MÔI TRƯỜNG CHO LỆNH TEST
+      # Thay vì sửa code Java, ta tiêm thẳng biến môi trường vào lúc chạy lệnh
       - name: Run Unit Tests
+        env:
+          # Trỏ URL vào cái database ảo vừa tạo ở phần services bên trên
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/jpay_db?createDatabaseIfNotExist=true
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root
         run: mvn test
 
-      # Bước 4: Nếu Test xanh hết, tiến hành đóng gói dự án thành file .jar
       - name: Build Project with Maven
         run: mvn clean package -DskipTests
