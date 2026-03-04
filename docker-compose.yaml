@@ -14,6 +14,26 @@ services:
     networks:
       - jpay-network
 
+
+
+
+  # 2. APP BACKEND MỚI THÊM VÀO
+  jpay-app:
+    build: .
+    container_name: jpay-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # LƯU Ý KỸ THUẬT: Khi đứng chung trong 1 mạng ảo (jpay-network),
+      # các container gọi nhau bằng TÊN SERVICE và CỔNG NỘI BỘ (3306), không dùng cổng ngoài (3307)
+      - SPRING_DATASOURCE_URL=jdbc:mysql://jpay-mysql:3306/jpay_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      - jpay-mysql
+    networks:
+      - jpay-network # Đưa App vào chung mạng ảo với DB
+
 volumes:
   mysql-data:
 

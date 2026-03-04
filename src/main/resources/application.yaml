@@ -7,12 +7,18 @@ spring:
   application:
     name: Jpay Core Banking
 
+#  datasource:
+#    # Kết nối vào cổng 3307
+#    url: jdbc:mysql://localhost:3307/jpay_db
+#    username: root
+#    password: root
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+
   datasource:
-    # Kết nối vào cổng 3307
-    url: jdbc:mysql://localhost:3307/jpay_db
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Nếu không có biến môi trường (chạy IntelliJ), dùng localhost:3307
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/jpay_db?createDatabaseIfNotExist=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
 
   jpa:
     hibernate:

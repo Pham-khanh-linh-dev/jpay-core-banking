@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  jpay-mysql:
+    image: mysql:8.0
+    container_name: jpay-mysql-container
+    environment:
+      - MYSQL_DATABASE=jpay_db
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - jpay-network
+
+
+
+
+    # 2. Cài đặt App JPay của chúng ta
+  jpay-app:
+    build: . # Bảo nó đọc cái file Dockerfile vừa viết lúc nãy
+    container_name: jpay-backend
+    ports:
+      - "8080:8080" # Mapping cổng 8080 của máy thật vào cổng 8080 của máy trong thùng
+    environment:
+          # Bơm biến môi trường vào cấu hình Spring Boot để kết nối với MySQL trong thùng
+          # Đổi `localhost` thành tên cái service mysql-db ở trên.
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/jpay_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+          # Bắt buộc JPay phải chờ MySQL chạy xong thì mới được chạy
+      - mysql-db
+volumes:
+  mysql-data:
+
+networks:
+  jpay-network:
+    driver: bridge
