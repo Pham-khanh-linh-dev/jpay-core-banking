@@ -10,6 +10,8 @@ public enum ErrorCode {
     USER_NOT_EXISTED_ERROR(1002, "User not exist", HttpStatus.NOT_FOUND),
     UNAUTHENTICATED_EXCEPTION(1003, "Lỗi xác thực tài khoản", HttpStatus.UNAUTHORIZED),
     RECEIVED_USER_NOT_EXISTED_ERROR(1004, " received user not exist", HttpStatus.NOT_FOUND),
+    ACCESS_DENIED(1005, "You are not have permission", HttpStatus.FORBIDDEN),
+
 
 
     WALLET_NOT_EXISTED_ERROR(2001, "User not exist", HttpStatus.NOT_FOUND),

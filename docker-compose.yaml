@@ -15,8 +15,6 @@ services:
       - jpay-network
 
 
-
-
   # 2. APP BACKEND MỚI THÊM VÀO
   jpay-app:
     build: .

@@ -18,6 +18,7 @@ import com.jpay.core_banking.repository.WalletRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -100,7 +102,7 @@ public class WalletService {
         var sender_wallet = walletRepository.findByUserForUpdate(sendUser).orElseThrow(() -> new AppException((ErrorCode.WALLET_NOT_EXISTED_ERROR)));
         if(sender_wallet.getBalance() < request.getAmount()) throw new AppException(ErrorCode.NOT_ENOUGH_BALANCE);
 
-        System.out.println(request.getReceivedUsername());
+        log.info(request.getReceivedUsername());
         var received_user = userRepository.findByUsername(request.getReceivedUsername()).orElseThrow(() -> new AppException((ErrorCode.RECEIVED_USER_NOT_EXISTED_ERROR)));
         var received_wallet = walletRepository.findByUserForUpdate(received_user).orElseThrow(() -> new AppException((ErrorCode.WALLET_NOT_EXISTED_ERROR)));
 

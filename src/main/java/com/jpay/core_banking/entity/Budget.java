@@ -1,0 +1,32 @@
+package com.jpay.core_banking.entity;
+
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Entity
+@Data
+@Builder
+@Slf4j
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "budget")
+public class Budget {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    String id;
+
+    Long amount;      // Hạn mức đặt ra (ví dụ: 5.000.000)
+    Long spentAmount; // Số tiền đã tiêu thực tế (ví dụ: 1.200.000)
+
+    int month;
+    int year;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    Category category;
+}

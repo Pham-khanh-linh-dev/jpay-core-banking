@@ -8,6 +8,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Builder
@@ -23,7 +24,7 @@ public class TransactionHistory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "wallet_id")
-    Wallet walletId;
+    Wallet wallet;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -34,6 +35,10 @@ public class TransactionHistory {
 
     @Column(nullable = false)
     long balanceAfter;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    Category categories;
 
     String message;
 

@@ -1,10 +1,13 @@
 package com.jpay.core_banking.entity;
 
+import com.jpay.core_banking.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -23,9 +26,16 @@ public class User {
 
     @Column(nullable = false)
     String password;
+
+    @ElementCollection // Tạo một bảng phụ ẩn trong DB để lưu danh sách quyền
+    @Enumerated(EnumType.STRING)
+    Set<Role> roles;
     String fullName;
 
-    @Column(nullable = true)
+    @Column
     String email;
     LocalDate dob;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    List<Category> category;
 }

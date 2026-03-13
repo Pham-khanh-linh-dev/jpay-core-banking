@@ -8,6 +8,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Builder
@@ -34,6 +35,10 @@ public class TransactionHistory {
 
     @Column(nullable = false)
     long balanceAfter;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    Category category;
 
     String message;
 

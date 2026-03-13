@@ -1,0 +1,38 @@
+package com.jpay.core_banking.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.repository.core.support.FragmentNotImplementedException;
+
+import java.io.File;
+import java.util.List;
+import java.util.UUID;
+
+@Entity
+@Data
+@Builder
+@Slf4j
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "catgory")
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class Category {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    String id;
+
+    String nameCategory;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    User user;
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
+    List<Budget> budgets;
+
+    @OneToMany(mappedBy = "category")
+    List<TransactionHistory> transactionHistories;
+}

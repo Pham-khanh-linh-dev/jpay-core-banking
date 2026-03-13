@@ -1,0 +1,39 @@
+package com.jpay.core_banking.configuration;
+
+import com.jpay.core_banking.entity.User;
+import com.jpay.core_banking.enums.Role;
+import com.jpay.core_banking.repository.UserRepository;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.util.Set;
+
+import static java.rmi.server.LogStream.log;
+
+@Slf4j
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Component
+public class DataInitializer implements CommandLineRunner {
+    private final UserRepository userRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public void run(String... args) throws Exception {
+        if (userRepository.findByUsername("admin").isEmpty()) {
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setPassword(passwordEncoder.encode("admin"));
+            admin.setRoles(Set.of(Role.ADMIN));
+
+            userRepository.save(admin);
+            log(">>> Đã khởi tạo tài khoản Admin mặc định.");
+        }
+    }
+}
