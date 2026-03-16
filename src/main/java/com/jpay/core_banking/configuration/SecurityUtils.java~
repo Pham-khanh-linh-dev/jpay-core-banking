@@ -1,4 +1,0 @@
-package com.jpay.core_banking.configuration;
-
-public class SecurityUtils {
-}
