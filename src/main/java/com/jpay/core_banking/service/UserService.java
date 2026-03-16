@@ -3,13 +3,18 @@ package com.jpay.core_banking.service;
 import com.jpay.core_banking.dto.request.UserCreationRequest;
 import com.jpay.core_banking.dto.request.UserUpdateRequest;
 import com.jpay.core_banking.dto.response.ApiResponse;
+import com.jpay.core_banking.dto.response.BudgetResponse;
 import com.jpay.core_banking.dto.response.UserResponse;
+import com.jpay.core_banking.entity.Budget;
+import com.jpay.core_banking.entity.Category;
 import com.jpay.core_banking.entity.User;
 import com.jpay.core_banking.entity.Wallet;
 import com.jpay.core_banking.enums.Role;
 import com.jpay.core_banking.exception.AppException;
 import com.jpay.core_banking.exception.ErrorCode;
 import com.jpay.core_banking.mapper.UserMapper;
+import com.jpay.core_banking.repository.BudgetRepository;
+import com.jpay.core_banking.repository.CategoryRepository;
 import com.jpay.core_banking.repository.UserRepository;
 import com.jpay.core_banking.repository.WalletRepository;
 import lombok.AccessLevel;
@@ -21,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -32,6 +38,8 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     WalletRepository walletRepository;
+    BudgetRepository budgetRepository;
+    CategoryRepository categoryRepository;
 
     @Transactional
     public UserResponse createUser(UserCreationRequest request) {
@@ -43,10 +51,27 @@ public class UserService {
 
         Wallet wallet = Wallet.builder()
                 .user(user)
-                .balance(10L)
+                .balance(10000L)
                 .currency("VND")
                 .build();
         walletRepository.save(wallet);
+
+//        Tạo category mặc định
+        Category defaultCategory = categoryRepository.save(Category.builder()
+                .isDefault(true)
+                .categoryName(CategoryService.DEFAULT_CATEGORY_NAME)
+                .user(user)
+                .build());
+
+//        Tạo budget mặc định
+        budgetRepository.save(Budget.builder()
+                .category(defaultCategory)
+                .amount(0L) // không giới hạn hạn mưcs
+                .spentAmount(0L)
+                .month(LocalDate.now().getMonthValue())
+                .year(LocalDate.now().getYear())
+                .build());
+
 
         return userMapper.toUserResponse(user);
     }

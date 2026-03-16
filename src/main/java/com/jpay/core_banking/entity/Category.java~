@@ -32,7 +32,7 @@ public class Category {
     @ManyToOne
     @JoinColumn(name = "user_id")
     User user;
-
+    
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     List<Budget> budgets;
 

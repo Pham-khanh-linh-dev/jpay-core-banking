@@ -49,7 +49,7 @@ public class WalletController {
 
     @PostMapping("/transfer")
     public ApiResponse<TransferResponse> transfer(@Valid @RequestBody TransferRequest request){
-        return ApiResponse.<TransferResponse>builder()
+        return ApiResponse.<WalletResponse>builder()
                 .result(walletService.transfer(request))
                 .build();
     }

@@ -20,6 +20,10 @@ public enum ErrorCode {
     SAME_NAME_TRANSFER(2004, "KHONG THE TU GUI TIEN CHO CHINH MINH", HttpStatus.BAD_REQUEST),
 
 
+    CATEGORY_EXISTED(3001, "category existed", HttpStatus.BAD_REQUEST),
+    CATEGORY_NOT_EXIST(3002, "category not found", HttpStatus.NOT_FOUND),
+    DEFAULT_CATEGORY_NOT_EXIST(3003, "default category not found", HttpStatus.NOT_FOUND),
+
 
     INVALID_KEY(9999, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR), // Lỗi này dùng khi gõ sai tên Enum
     ;

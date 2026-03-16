@@ -17,8 +17,4 @@ public class TransferRequest {
 
     @Min(value = 1000, message = "AMOUNT_TOO_SMALL")
     long amount;
-
-    String categoryId;
-
-    String message; // lời nhắn giao dịch
 }

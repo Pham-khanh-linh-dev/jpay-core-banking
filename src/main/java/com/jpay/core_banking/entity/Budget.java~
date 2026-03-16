@@ -15,8 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "budget", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_category_month_year", // Đặt tên gợi nhớ,
-                            columnNames = {"category_id", "month", "year"})
+        @UniqueConstraint(columnNames = {"category_id", "month", "year"})
 })
 public class Budget {
     @Id

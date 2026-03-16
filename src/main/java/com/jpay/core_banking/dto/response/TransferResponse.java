@@ -3,7 +3,9 @@ package com.jpay.core_banking.dto.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -12,9 +14,12 @@ import lombok.experimental.NonFinal;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class WalletResponse {
-    long balance;
-
-    String currency = "VND";
-
+public class TransferResponse {
+    String senderUsername;
+    String receiverUsername;
+    long amount;
+    long balanceAfter;
+    String categoryName;
+    String message;
+    LocalDate timestamp;
 }
