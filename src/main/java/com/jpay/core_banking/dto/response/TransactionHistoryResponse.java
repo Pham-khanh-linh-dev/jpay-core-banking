@@ -16,8 +16,6 @@ import java.time.LocalDate;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL) // không hiện field nếu nó null
 public class TransactionHistoryResponse {
-    Wallet wallet;
-
     TransactionType type;
 
     long amount;

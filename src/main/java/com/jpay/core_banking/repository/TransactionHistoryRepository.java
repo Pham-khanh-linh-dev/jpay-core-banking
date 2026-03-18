@@ -10,6 +10,6 @@ import java.util.List;
 @Repository
 public interface TransactionHistoryRepository extends JpaRepository<TransactionHistory, String> {
 
-    List<TransactionHistory> findByWalletOrderByCreatedAt(Wallet wallet);
+    List<TransactionHistory> findByWalletOrderByCreatedAtDesc(Wallet wallet);
 
 }

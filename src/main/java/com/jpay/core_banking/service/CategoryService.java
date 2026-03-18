@@ -32,65 +32,77 @@ import java.util.List;
 @RequiredArgsConstructor // 2. Tự động tạo Constructor cho các biến final (Thay thế cho @Autowired)
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true) // 3. Các biến bên dưới là private final
 public class CategoryService {
-    CategoryRepository categoryRepository;
-    UserRepository userRepository;
-    BudgetRepository budgetRepository;
-    CategoryMapper categoryMapper;
-    SecurityUtils securityUtils;
-    public static final String DEFAULT_CATEGORY_NAME = "Chi tiêu chung";
+        CategoryRepository categoryRepository;
+        UserRepository userRepository;
+        BudgetRepository budgetRepository;
+        CategoryMapper categoryMapper;
+        SecurityUtils securityUtils;
+        public static final String DEFAULT_CATEGORY_NAME = "Chi tiêu chung";
 
-    public CategoryResponse createCategory(CategoryCreationRequest request){
-        var userName = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = userRepository.findByUsername(userName).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+        public CategoryResponse createCategory(CategoryCreationRequest request) {
+                var userName = SecurityContextHolder.getContext().getAuthentication().getName();
+                var user = userRepository.findByUsername(userName)
+                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
 
-        if(categoryRepository.existsByCategoryName(request.getCategoryName())) throw new AppException(ErrorCode.CATEGORY_EXISTED);
+                if (categoryRepository.existsByCategoryName(request.getCategoryName()))
+                        throw new AppException(ErrorCode.CATEGORY_EXISTED);
 
-        Category category = Category.builder()
-                .categoryName(request.getCategoryName())
-                .user(user)
-                .build();
-        categoryRepository.save(category);
+                Category category = Category.builder()
+                                .categoryName(request.getCategoryName())
+                                .user(user)
+                                .build();
+                categoryRepository.save(category);
 
-        int curentMonth = request.getMonth() != null ? request.getMonth() : LocalDate.now().getMonthValue();
-        int currentYear = request.getYear() != null ? request.getYear() : LocalDate.now().getYear();
-        long amount = request.getAmount() != null ? request.getAmount() : 0L;
-        Budget budget = budgetRepository.save(Budget.builder()
-                        .amount(amount)
-                        .spentAmount(0L)
-                        .month(curentMonth)
-                        .year(currentYear)
-                        .category(category)
-                        .build());
-
-        List<Budget> budgets = new ArrayList<>();
-        budgets.add(budget);
-        category.setBudgets(budgets);
-
-        return categoryMapper.toCategoryResponse(category);
-    }
-
-    @Transactional
-    public CategoryResponse upsertBudget(BudgetCreationRequest request){
-
-        var category = categoryRepository.findByCategoryName(request.getCategoryName())
-                .orElseThrow(() -> new AppException((ErrorCode.CATEGORY_NOT_EXIST)));
-        int month = request.getMonth();
-        int year = request.getYear();
-
-        Budget budget = budgetRepository.findByCategoryIdAndMonthAndYear(category.getId(), month, year)
-                .map(existedBudget
-                        -> {existedBudget.setAmount(request.getAmount());
-                        return budgetRepository.save(existedBudget);
-                }).orElseGet(() -> {
-                        return budgetRepository.save(Budget.builder()
-                                .amount(request.getAmount())
-                                .month(month)
-                                .year(year)
-                                .category(category)
+                int curentMonth = request.getMonth() != null ? request.getMonth() : LocalDate.now().getMonthValue();
+                int currentYear = request.getYear() != null ? request.getYear() : LocalDate.now().getYear();
+                long amount = request.getAmount() != null ? request.getAmount() : 0L;
+                Budget budget = budgetRepository.save(Budget.builder()
+                                .amount(amount)
                                 .spentAmount(0L)
+                                .month(curentMonth)
+                                .year(currentYear)
+                                .category(category)
                                 .build());
-                        });
-        return categoryMapper.toCategoryResponse(category);
-    }
+
+                List<Budget> budgets = new ArrayList<>();
+                budgets.add(budget);
+                category.setBudgets(budgets);
+
+                return categoryMapper.toCategoryResponse(category);
+        }
+
+        @Transactional
+        public CategoryResponse upsertBudget(BudgetCreationRequest request) {
+
+                var category = categoryRepository.findByCategoryName(request.getCategoryName())
+                                .orElseThrow(() -> new AppException((ErrorCode.CATEGORY_NOT_EXIST)));
+                int month = request.getMonth();
+                int year = request.getYear();
+
+                Budget budget = budgetRepository.findByCategoryIdAndMonthAndYear(category.getId(), month, year)
+                                .map(existedBudget -> {
+                                        existedBudget.setAmount(request.getAmount());
+                                        return budgetRepository.save(existedBudget);
+                                }).orElseGet(() -> {
+                                        return budgetRepository.save(Budget.builder()
+                                                        .amount(request.getAmount())
+                                                        .month(month)
+                                                        .year(year)
+                                                        .category(category)
+                                                        .spentAmount(0L)
+                                                        .build());
+                                });
+                return categoryMapper.toCategoryResponse(category);
+        }
+
+        @Transactional(readOnly = true)
+        public List<CategoryResponse> getMyCategories() {
+                var userName = SecurityContextHolder.getContext().getAuthentication().getName();
+                var user = userRepository.findByUsername(userName)
+                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+
+                List<Category> categories = categoryRepository.findByUser(user);
+                return categories.stream().map(categoryMapper::toCategoryResponse).toList();
+        }
 
 }
