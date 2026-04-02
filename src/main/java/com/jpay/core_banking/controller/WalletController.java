@@ -25,7 +25,7 @@ public class WalletController {
     WalletService walletService;
 
     @GetMapping("/my-wallet")
-    public ApiResponse<WalletResponse> getMyWallet(){
+    public ApiResponse<WalletResponse> getMyWallet() {
         return ApiResponse.<WalletResponse>builder()
                 .result(walletService.getMyWallet())
                 .build();
@@ -33,30 +33,32 @@ public class WalletController {
     }
 
     @PostMapping("/deposit")
-    public ApiResponse<WalletResponse> deposit(@Valid @RequestBody TransactionRequest request){
+    public ApiResponse<WalletResponse> deposit(@Valid @RequestBody TransactionRequest request) {
         return ApiResponse.<WalletResponse>builder()
                 .result(walletService.deposit(request))
                 .build();
     }
 
     @PostMapping("/withdraw")
-    public ApiResponse<WalletResponse> withdraw(@Valid @RequestBody TransactionRequest request){
+    public ApiResponse<WalletResponse> withdraw(@Valid @RequestBody TransactionRequest request) {
         return ApiResponse.<WalletResponse>builder()
                 .result(walletService.withdraw(request))
                 .build();
     }
 
     @PostMapping("/transfer")
-    public ApiResponse<WalletResponse> transfer(@RequestBody TransferRequest request){
+    public ApiResponse<WalletResponse> transfer(@Valid @RequestBody TransferRequest request) {
         return ApiResponse.<WalletResponse>builder()
                 .result(walletService.transfer(request))
                 .build();
     }
 
     @GetMapping("/myTransferHistory")
-    public ApiResponse<List<TransactionHistoryResponse>> myTransferHistory(){
-        return ApiResponse.<List<TransactionHistoryResponse>>builder()
-                .result(walletService.myTransferHistory())
+    public ApiResponse<com.jpay.core_banking.dto.response.PageResponse<TransactionHistoryResponse>> myTransferHistory(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        return ApiResponse.<com.jpay.core_banking.dto.response.PageResponse<TransactionHistoryResponse>>builder()
+                .result(walletService.myTransferHistory(page, size))
                 .build();
     }
 }
