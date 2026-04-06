@@ -7,6 +7,7 @@ import com.jpay.core_banking.dto.response.BudgetResponse;
 import com.jpay.core_banking.dto.response.CategoryResponse;
 import com.jpay.core_banking.entity.Budget;
 import com.jpay.core_banking.entity.Category;
+import com.jpay.core_banking.entity.User;
 import com.jpay.core_banking.exception.AppException;
 import com.jpay.core_banking.exception.ErrorCode;
 import com.jpay.core_banking.mapper.CategoryMapper;
@@ -39,10 +40,9 @@ public class CategoryService {
         SecurityUtils securityUtils;
         public static final String DEFAULT_CATEGORY_NAME = "Chi tiêu chung";
 
+        @Transactional
         public CategoryResponse createCategory(CategoryCreationRequest request) {
-                var userName = SecurityContextHolder.getContext().getAuthentication().getName();
-                var user = userRepository.findByUsername(userName)
-                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+                User user = securityUtils.getCurrentUser();
 
                 if (categoryRepository.existsByCategoryName(request.getCategoryName()))
                         throw new AppException(ErrorCode.CATEGORY_EXISTED);
@@ -51,24 +51,22 @@ public class CategoryService {
                                 .categoryName(request.getCategoryName())
                                 .user(user)
                                 .build();
-                categoryRepository.save(category);
 
                 int curentMonth = request.getMonth() != null ? request.getMonth() : LocalDate.now().getMonthValue();
                 int currentYear = request.getYear() != null ? request.getYear() : LocalDate.now().getYear();
                 long amount = request.getAmount() != null ? request.getAmount() : 0L;
-                Budget budget = budgetRepository.save(Budget.builder()
+                Budget budget = Budget.builder()
                                 .amount(amount)
                                 .spentAmount(0L)
                                 .month(curentMonth)
                                 .year(currentYear)
-                                .category(category)
-                                .build());
+                                .build();
 
-                List<Budget> budgets = new ArrayList<>();
-                budgets.add(budget);
-                category.setBudgets(budgets);
+                category.addBudget(budget);
 
-                return categoryMapper.toCategoryResponse(category);
+                Category savedCategory = categoryRepository.save(category);
+
+                return categoryMapper.toCategoryResponse(savedCategory);
         }
 
         @Transactional
@@ -97,10 +95,8 @@ public class CategoryService {
 
         @Transactional(readOnly = true)
         public List<CategoryResponse> getMyCategories() {
-                var userName = SecurityContextHolder.getContext().getAuthentication().getName();
-                var user = userRepository.findByUsername(userName)
-                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
-
+                User user = securityUtils.getCurrentUser();
+                
                 List<Category> categories = categoryRepository.findByUser(user);
                 return categories.stream().map(categoryMapper::toCategoryResponse).toList();
         }

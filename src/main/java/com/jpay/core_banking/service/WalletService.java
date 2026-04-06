@@ -37,176 +37,166 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class WalletService {
-    private final UserRepository userRepository;
-    private final WalletRepository walletRepository;
-    private final WalletMapper walletMapper;
-    private final TransactionHistoryRepository transactionHistoryRepository;
-    private final TransactionHistoryMapper transactionHistoryMapper;
-    private final SecurityUtils securityUtils;
-    private final CategoryRepository categoryRepository;
-    private final BudgetService budgetService;
+        private final UserRepository userRepository;
+        private final WalletRepository walletRepository;
+        private final WalletMapper walletMapper;
+        private final TransactionHistoryRepository transactionHistoryRepository;
+        private final TransactionHistoryMapper transactionHistoryMapper;
+        private final SecurityUtils securityUtils;
+        private final CategoryRepository categoryRepository;
+        private final BudgetService budgetService;
 
-    public WalletResponse getMyWallet() {
-        var context = SecurityContextHolder.getContext();
+        public WalletResponse getMyWallet() {
+                User user = securityUtils.getCurrentUser();
+                Wallet wallet = walletRepository.findByUser(user)
+                                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
 
-        var username = context.getAuthentication().getName();
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
-        Wallet wallet = walletRepository.findByUser(user)
-                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
-
-        return walletMapper.toWalletResponse(wallet);
-    }
-
-    @Transactional
-    public WalletResponse deposit(TransactionRequest request) {
-        var context = SecurityContextHolder.getContext();
-
-        var username = context.getAuthentication().getName();
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
-        var wallet = walletRepository.findByUserForUpdate(user)
-                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
-        wallet.setBalance(wallet.getBalance() + request.getAmount());
-        walletRepository.save(wallet);
-
-        var transactionHistory = TransactionHistory.builder()
-                .wallet(wallet)
-                .amount(request.getAmount())
-                .message("Vua thuc hien giao dich nap tien")
-                .balanceAfter(wallet.getBalance())
-                .type(TransactionType.DEPOSIT)
-                .build();
-        transactionHistoryRepository.save(transactionHistory);
-
-        return walletMapper.toWalletResponse(wallet);
-    }
-
-    @Transactional
-    public WalletResponse withdraw(TransactionRequest request) {
-        var context = SecurityContextHolder.getContext();
-
-        var username = context.getAuthentication().getName();
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
-        var wallet = walletRepository.findByUserForUpdate(user)
-                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
-
-        if (wallet.getBalance() < request.getAmount())
-            throw new RuntimeException("So tien trong tai khoan khong du de rut");
-        wallet.setBalance(wallet.getBalance() - request.getAmount());
-        walletRepository.save(wallet);
-
-        var transactionHistory = TransactionHistory.builder()
-                .wallet(wallet)
-                .amount(request.getAmount())
-                .message("Vua thuc hien giao dich Rut tien")
-                .balanceAfter(wallet.getBalance())
-                .type(TransactionType.WITHDRAW)
-                .build();
-        transactionHistoryRepository.save(transactionHistory);
-        return walletMapper.toWalletResponse(wallet);
-    }
-
-    @Transactional
-    public TransferResponse transfer(TransferRequest request) {
-
-        User sender = securityUtils.getCurrentUser();
-
-        var sender_wallet = checkSender(request.getAmount());
-        var received_wallet = checkReciever(request.getReceivedUsername());
-
-        // Xác định category
-        Category categorySender;
-        log.info("Request CategoryId: '{}'", request.getCategoryId());
-        if (StringUtils.hasText(request.getCategoryId())) {
-            categorySender = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXIST));
-        } else {
-            // Tự động lấy category mặc định
-            categorySender = categoryRepository.findByUserAndIsDefault(sender, true)
-                    .orElseThrow(() -> new AppException(ErrorCode.DEFAULT_CATEGORY_NOT_EXIST));
+                return walletMapper.toWalletResponse(wallet);
         }
 
-        sender_wallet.setBalance(sender_wallet.getBalance() - request.getAmount());
-        received_wallet.setBalance(received_wallet.getBalance() + request.getAmount());
+        @Transactional
+        public WalletResponse deposit(TransactionRequest request) {
+                User user = securityUtils.getCurrentUser();
 
-        walletRepository.save(sender_wallet);
-        walletRepository.save(received_wallet);
+                var wallet = walletRepository.findByUserForUpdate(user)
+                                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
+                wallet.setBalance(wallet.getBalance() + request.getAmount());
+                walletRepository.save(wallet);
 
-        var transactionHistorySender = TransactionHistory.builder()
-                .wallet(sender_wallet)
-                .category(categorySender)
-                .amount(request.getAmount())
-                .message("Vua thuc hien giao dich Chuyen tien")
-                .balanceAfter(sender_wallet.getBalance())
-                .type(TransactionType.TRANSFER_OUT)
-                .build();
-        transactionHistoryRepository.save(transactionHistorySender);
+                var transactionHistory = TransactionHistory.builder()
+                                .wallet(wallet)
+                                .amount(request.getAmount())
+                                .message("Vua thuc hien giao dich nap tien")
+                                .balanceAfter(wallet.getBalance())
+                                .type(TransactionType.DEPOSIT)
+                                .build();
+                transactionHistoryRepository.save(transactionHistory);
 
-        budgetService.updateSpentAmount(categorySender, request.getAmount());
+                return walletMapper.toWalletResponse(wallet);
+        }
 
-        var transactionHistoryReceiver = TransactionHistory.builder()
-                .wallet(received_wallet)
-                .amount(request.getAmount())
-                .message("Vua nhan tien")
-                .balanceAfter(received_wallet.getBalance())
-                .type(TransactionType.TRANSFER_IN)
-                .build();
-        transactionHistoryRepository.save(transactionHistoryReceiver);
+        @Transactional
+        public WalletResponse withdraw(TransactionRequest request) {
+                var user = securityUtils.getCurrentUser();
 
-        return TransferResponse.builder()
-                .categoryName(categorySender.getCategoryName())
-                .balanceAfter(sender_wallet.getBalance())
-                .senderUsername(sender.getUsername())
-                .receiverUsername(request.getReceivedUsername())
-                .message(request.getMessage())
-                .amount(request.getAmount())
-                .timestamp(transactionHistorySender.getCreatedAt())
-                .build();
-    }
+                var wallet = walletRepository.findByUserForUpdate(user)
+                                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
 
-    public Wallet checkSender(long amount) {
-        String usernameSender = SecurityContextHolder.getContext().getAuthentication().getName();
+                if (wallet.getBalance() < request.getAmount())
+                        throw new AppException(ErrorCode.NOT_ENOUGH_BALANCE);
+                wallet.setBalance(wallet.getBalance() - request.getAmount());
+                walletRepository.save(wallet);
 
-        var sendUser = userRepository.findByUsername(usernameSender)
-                .orElseThrow(() -> new AppException((ErrorCode.USER_NOT_EXISTED_ERROR)));
-        var sender_wallet = walletRepository.findByUserForUpdate(sendUser)
-                .orElseThrow(() -> new AppException((ErrorCode.WALLET_NOT_EXISTED_ERROR)));
-        if (sender_wallet.getBalance() < amount)
-            throw new AppException(ErrorCode.NOT_ENOUGH_BALANCE);
+                var transactionHistory = TransactionHistory.builder()
+                                .wallet(wallet)
+                                .amount(request.getAmount())
+                                .message("Vua thuc hien giao dich Rut tien")
+                                .balanceAfter(wallet.getBalance())
+                                .type(TransactionType.WITHDRAW)
+                                .build();
+                transactionHistoryRepository.save(transactionHistory);
+                return walletMapper.toWalletResponse(wallet);
+        }
 
-        return sender_wallet;
-    }
+        @Transactional
+        public TransferResponse transfer(TransferRequest request) {
 
-    public Wallet checkReciever(String recieverName) {
-        String usernameSender = SecurityContextHolder.getContext().getAuthentication().getName();
-        if (usernameSender.equals(recieverName))
-            throw new AppException(ErrorCode.SAME_NAME_TRANSFER);
+                User sender = securityUtils.getCurrentUser();
 
-        var received_user = userRepository.findByUsername(recieverName)
-                .orElseThrow(() -> new AppException((ErrorCode.RECEIVED_USER_NOT_EXISTED_ERROR)));
-        var received_wallet = walletRepository.findByUserForUpdate(received_user)
-                .orElseThrow(() -> new AppException((ErrorCode.WALLET_NOT_EXISTED_ERROR)));
+                var sender_wallet = checkSender(request.getAmount());
+                var received_wallet = checkReciever(request.getReceivedUsername());
 
-        return received_wallet;
-    }
+                // Xác định category
+                Category categorySender;
+                log.info("Request CategoryId: '{}'", request.getCategoryId());
+                if (StringUtils.hasText(request.getCategoryId())) {
+                        categorySender = categoryRepository.findById(request.getCategoryId())
+                                        .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXIST));
+                } else {
+                        // Tự động lấy category mặc định
+                        categorySender = categoryRepository.findByUserAndIsDefault(sender, true)
+                                        .orElseThrow(() -> new AppException(ErrorCode.DEFAULT_CATEGORY_NOT_EXIST));
+                }
 
-    @Transactional(readOnly = true)
-    public List<TransactionHistoryResponse> myTransferHistory() {
-        var user = currentUsername();
-        var wallet = walletRepository.findByUser(user)
-                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
+                sender_wallet.setBalance(sender_wallet.getBalance() - request.getAmount());
+                received_wallet.setBalance(received_wallet.getBalance() + request.getAmount());
 
-        var transactionHistory = transactionHistoryRepository.findByWalletOrderByCreatedAtDesc(wallet);
-        return transactionHistoryMapper.toTransactionResponse(transactionHistory);
-    }
+                walletRepository.save(sender_wallet);
+                walletRepository.save(received_wallet);
 
-    public User currentUsername() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
-        return user;
-    }
+                var transactionHistorySender = TransactionHistory.builder()
+                                .wallet(sender_wallet)
+                                .category(categorySender)
+                                .amount(request.getAmount())
+                                .message("Vua thuc hien giao dich Chuyen tien")
+                                .balanceAfter(sender_wallet.getBalance())
+                                .type(TransactionType.TRANSFER_OUT)
+                                .build();
+                transactionHistoryRepository.save(transactionHistorySender);
+
+                budgetService.updateSpentAmount(categorySender, request.getAmount());
+
+                var transactionHistoryReceiver = TransactionHistory.builder()
+                                .wallet(received_wallet)
+                                .amount(request.getAmount())
+                                .message("Vua nhan tien")
+                                .balanceAfter(received_wallet.getBalance())
+                                .type(TransactionType.TRANSFER_IN)
+                                .build();
+                transactionHistoryRepository.save(transactionHistoryReceiver);
+
+                return TransferResponse.builder()
+                                .categoryName(categorySender.getCategoryName())
+                                .balanceAfter(sender_wallet.getBalance())
+                                .senderUsername(sender.getUsername())
+                                .receiverUsername(request.getReceivedUsername())
+                                .message(request.getMessage())
+                                .amount(request.getAmount())
+                                .timestamp(transactionHistorySender.getCreatedAt())
+                                .build();
+        }
+
+        public Wallet checkSender(long amount) {
+                String usernameSender = securityUtils.getCurrentUser().getUsername();
+
+                var sendUser = userRepository.findByUsername(usernameSender)
+                                .orElseThrow(() -> new AppException((ErrorCode.USER_NOT_EXISTED_ERROR)));
+                var sender_wallet = walletRepository.findByUserForUpdate(sendUser)
+                                .orElseThrow(() -> new AppException((ErrorCode.WALLET_NOT_EXISTED_ERROR)));
+                if (sender_wallet.getBalance() < amount)
+                        throw new AppException(ErrorCode.NOT_ENOUGH_BALANCE);
+
+                return sender_wallet;
+        }
+
+        public Wallet checkReciever(String recieverName) {
+                String usernameSender = securityUtils.getCurrentUser().getUsername();
+                if (usernameSender.equals(recieverName))
+                        throw new AppException(ErrorCode.SAME_NAME_TRANSFER);
+
+                var received_user = userRepository.findByUsername(recieverName)
+                                .orElseThrow(() -> new AppException((ErrorCode.RECEIVED_USER_NOT_EXISTED_ERROR)));
+                var received_wallet = walletRepository.findByUserForUpdate(received_user)
+                                .orElseThrow(() -> new AppException((ErrorCode.WALLET_NOT_EXISTED_ERROR)));
+
+                return received_wallet;
+        }
+
+        @Transactional(readOnly = true)
+        public List<TransactionHistoryResponse> myTransferHistory() {
+                var user = securityUtils.getCurrentUser();
+                var wallet = walletRepository.findByUser(user)
+                                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_EXISTED_ERROR));
+
+                var transactionHistory = transactionHistoryRepository.findByWalletOrderByCreatedAtDesc(wallet);
+                return transactionHistoryMapper.toTransactionResponse(transactionHistory);
+        }
+
+        public User currentUsername() {
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                var user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+                return user;
+        }
 
 }

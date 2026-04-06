@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.repository.core.support.FragmentNotImplementedException;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,8 +34,15 @@ public class Category {
     @JoinColumn(name = "user_id")
     User user;
 
+    @Builder.Default
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
-    List<Budget> budgets;
+    List<Budget> budgets = new ArrayList<>();
+
+    // helper
+    public void addBudget(Budget budget) {
+        budgets.add(budget);
+        budget.setCategory(this);
+    }
 
     @OneToMany(mappedBy = "category")
     List<TransactionHistory> transactionHistories;

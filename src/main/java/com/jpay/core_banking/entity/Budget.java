@@ -23,8 +23,8 @@ public class Budget {
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
-    Long amount;      // Hạn mức đặt ra (ví dụ: 5.000.000)
-    Long spentAmount; // Số tiền đã tiêu thực tế (ví dụ: 1.200.000)
+    Long amount;
+    Long spentAmount;
 
     @Column(nullable = false)
     int month;

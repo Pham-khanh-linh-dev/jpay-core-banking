@@ -17,9 +17,8 @@ public class GlobalExceptionHandler {
 
     private static final String MIN_ATTRIBUTE = "value";
 
-
     @ExceptionHandler(value = AppException.class)
-    ResponseEntity<ApiResponse> handlingAppException(AppException appException){
+    ResponseEntity<ApiResponse> handlingAppException(AppException appException) {
         ErrorCode errorCode = appException.getErrorCode();
 
         ApiResponse apiResponse = new ApiResponse<>();
@@ -30,7 +29,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(value = AccessDeniedException.class)
-    ResponseEntity<ApiResponse> handlingAccessDeniedException(AccessDeniedException accessDenied){
+    ResponseEntity<ApiResponse> handlingAccessDeniedException(AccessDeniedException accessDenied) {
         ErrorCode errorCode = ErrorCode.ACCESS_DENIED;
 
         ApiResponse apiResponse = new ApiResponse();
@@ -40,52 +39,51 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }
 
-
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    ResponseEntity<ApiResponse> handlingMethodArgumentNotValidException(MethodArgumentNotValidException exception){
+    ResponseEntity<ApiResponse> handlingMethodArgumentNotValidException(MethodArgumentNotValidException exception) {
         String enumkey = exception.getBindingResult().getFieldError().getDefaultMessage();
 
         // Mặc định là lỗi INVALID_KEY nếu không tìm thấy key trong Enum
         ErrorCode errorCode = ErrorCode.INVALID_KEY;
-        try{
-            // Biến chuỗi trong validation vví dụ "AMOUNT_TOO_SMALL" thành Object ErrorCode trong Enum
+        try {
+            // Biến chuỗi trong validation vví dụ "AMOUNT_TOO_SMALL" thành Object ErrorCode
+            // trong Enum
             errorCode = ErrorCode.valueOf(enumkey);
-        } catch(IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             log.error("ErrorCode '{}' not define in Enum", enumkey);
         }
         var apiResponse = new ApiResponse<>();
         apiResponse.setCode(errorCode.getCode());
         apiResponse.setMessage(errorCode.getMessage());
 
-        try{
+        try {
             var constraintViolation = exception.getBindingResult()
                     .getAllErrors().getFirst().unwrap(ConstraintViolation.class);
 
             var attributes = constraintViolation.getConstraintDescriptor().getAttributes();
 
             apiResponse.setMessage(mapAttribute(errorCode.getMessage(), attributes));
-        } catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
 
         }
         return ResponseEntity
                 .status(errorCode.getStatusCode())
                 .body(apiResponse);
     }
+
     private String mapAttribute(String message, Map<String, Object> attributes) {
         String minValue = String.valueOf(attributes.get(MIN_ATTRIBUTE));
-        return message.replace("{" + MIN_ATTRIBUTE +"}", minValue);
+        return message.replace("{" + MIN_ATTRIBUTE + "}", minValue);
     }
 
+    // Bắt các lỗi còn lại (RuntimeException và tất cả Exception khác)
+    @ExceptionHandler(value = Exception.class)
+    ResponseEntity<ApiResponse> handlingException(Exception exception) {
+        log.error("Exception chưa được phân loại (CRITICAL BUG): ", exception);
 
-    // Bắt các lỗi còn lại (RuntimeException)
-    @ExceptionHandler(value = RuntimeException.class)
-    ResponseEntity<ApiResponse> handlingRuntimeException(RuntimeException exception) {
-        log.error("Exception chưa được phân loại: ", exception);
-
-        ApiResponse apiResponse = new ApiResponse();
-        apiResponse.setCode(ErrorCode.INVALID_KEY.getCode());
-        apiResponse.setMessage(ErrorCode.INVALID_KEY.getMessage()); // Hoặc exception.getMessage() nếu muốn hiện chi tiết
-
-        return ResponseEntity.badRequest().body(apiResponse);
+        ApiResponse apiResponse = new ApiResponse<>();
+        apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
+        apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
+        return ResponseEntity.internalServerError().body(apiResponse);
     }
 }

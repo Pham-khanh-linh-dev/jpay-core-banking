@@ -7,7 +7,6 @@ import com.jpay.core_banking.dto.response.AuthenticationResponse;
 import com.jpay.core_banking.entity.InvalidatedToken;
 import com.jpay.core_banking.entity.User;
 import com.jpay.core_banking.enums.Role;
-import com.jpay.core_banking.enums.TransactionType;
 import com.jpay.core_banking.exception.AppException;
 import com.jpay.core_banking.exception.ErrorCode;
 import com.jpay.core_banking.repository.InvalidatedTokenRepository;
@@ -51,12 +50,13 @@ public class AuthenticationService {
     @Value("${jwt.refreshable-duration}")
     private long REFRESHABLE_DURATION;
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request){
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
         var user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
 
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        if(!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
+        if (!authenticated)
+            throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
 
         return AuthenticationResponse.builder()
                 .token(generateToken(user))
@@ -64,44 +64,44 @@ public class AuthenticationService {
                 .build();
     }
 
-    private String generateToken(User user){
-        JWSHeader header = new JWSHeader( JWSAlgorithm.HS256);
+    private String generateToken(User user) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
+
+        Instant now = Instant.now();
+        Instant expiration = now.plus(1, ChronoUnit.HOURS);
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
                 .subject(user.getUsername())
                 .issuer("jpay.com")
-                .issueTime(new Date())
-                .expirationTime(new Date(
-                        Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()
-                ))
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(expiration))
                 .claim("userID", user.getId())
                 .jwtID(UUID.randomUUID().toString())
                 .claim("scope", buildScope(user))
                 .build();
-        Payload payload  = new Payload(jwtClaimsSet.toJSONObject());
+        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
         JWSObject jwsObject = new JWSObject(header, payload);
 
-        try{
+        try {
             jwsObject.sign(new MACSigner(signerKey.getBytes()));
             return jwsObject.serialize();
-        }catch(JOSEException e){
+        } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void logout(LogoutRequest request){
-        try{
+    public void logout(LogoutRequest request) {
+        try {
             SignedJWT signedJWT = verifyToken(request.getToken(), true);
 
             String jit = signedJWT.getJWTClaimsSet().getJWTID();
             Date expireTime = signedJWT.getJWTClaimsSet().getExpirationTime();
 
-
             invalidatedTokenRepository.save(InvalidatedToken.builder()
                     .jit(jit)
                     .expireTime(expireTime)
                     .build());
-        } catch(AppException | ParseException | JOSEException e){
+        } catch (AppException | ParseException | JOSEException e) {
             throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
         }
     }
@@ -111,15 +111,19 @@ public class AuthenticationService {
 
         SignedJWT signedJWT = SignedJWT.parse(token);
 
-        if(!signedJWT.verify(verifier)) throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
+        if (!signedJWT.verify(verifier))
+            throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
 
         Date expireTime = (isRefresh)
-                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS).toEpochMilli())
+                ? Date.from(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(REFRESHABLE_DURATION,
+                        ChronoUnit.SECONDS))
                 : signedJWT.getJWTClaimsSet().getExpirationTime();
 
-        if(expireTime.before(new Date())) throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
+        if (expireTime.before(Date.from(Instant.now())))
+            throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
 
-        if(invalidatedTokenRepository.existsByJit(signedJWT.getJWTClaimsSet().getJWTID())) throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
+        if (invalidatedTokenRepository.existsByJit(signedJWT.getJWTClaimsSet().getJWTID()))
+            throw new AppException(ErrorCode.UNAUTHENTICATED_EXCEPTION);
 
         return signedJWT;
     }
@@ -134,7 +138,8 @@ public class AuthenticationService {
                 .expireTime(expireTime)
                 .build();
 
-        var user = userRepository.findByUsername(signedJWT.getJWTClaimsSet().getSubject()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+        var user = userRepository.findByUsername(signedJWT.getJWTClaimsSet().getSubject())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
         invalidatedTokenRepository.save(invalidatedToken);
 
         return AuthenticationResponse.builder()
@@ -143,9 +148,9 @@ public class AuthenticationService {
                 .build();
     }
 
-    public String buildScope(User user){
+    public String buildScope(User user) {
         StringJoiner stringJoiner = new StringJoiner(" ");
-        if(!CollectionUtils.isEmpty(user.getRoles())){
+        if (!CollectionUtils.isEmpty(user.getRoles())) {
             for (Role role : user.getRoles()) {
                 stringJoiner.add(role.name());
             }
@@ -153,34 +158,26 @@ public class AuthenticationService {
         return stringJoiner.toString();
     }
 
-
-
-
-
-
-
-
-
-
-//    CHuyển sang dùng oauth2 Resource Server nên không cần introspec thủ công nữa
-//    public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
-//        var token = request.getToken();
-//
-//        // 1. Tạo bộ xác thực (Verifier) dựa trên khóa bí mật của bạn
-//        JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
-//
-//        // 2. Parse cái token người dùng gửi lên
-//        SignedJWT signedJWT = SignedJWT.parse(token);
-//
-//        // 3. Kiểm tra xem token này có đúng chữ ký không (có bị sửa đổi không)
-//        boolean verified = signedJWT.verify(verifier);
-//
-//        // 4. Kiểm tra xem token đã hết hạn chưa
-//        Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-//        boolean isNotExpired = expiryTime.after(new Date());
-//
-//        return IntrospectResponse.builder()
-//                .valid(verified && isNotExpired) // Hợp lệ khi cả chữ ký đúng và chưa hết hạn
-//                .build();
-//    }
+    // CHuyển sang dùng oauth2 Resource Server nên không cần introspec thủ công nữa
+    // public IntrospectResponse introspect(IntrospectRequest request) throws
+    // JOSEException, ParseException {
+    // var token = request.getToken();
+    //
+    // // 1. Tạo bộ xác thực (Verifier) dựa trên khóa bí mật của bạn
+    // JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
+    //
+    // // 2. Parse cái token người dùng gửi lên
+    // SignedJWT signedJWT = SignedJWT.parse(token);
+    //
+    // // 3. Kiểm tra xem token này có đúng chữ ký không (có bị sửa đổi không)
+    // boolean verified = signedJWT.verify(verifier);
+    //
+    // // 4. Kiểm tra xem token đã hết hạn chưa
+    // Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+    // boolean isNotExpired = expiryTime.after(new Date());
+    //
+    // return IntrospectResponse.builder()
+    // .valid(verified && isNotExpired) // Hợp lệ khi cả chữ ký đúng và chưa hết hạn
+    // .build();
+    // }
 }

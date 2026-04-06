@@ -1,5 +1,6 @@
 package com.jpay.core_banking.service;
 
+import com.jpay.core_banking.configuration.SecurityUtils;
 import com.jpay.core_banking.dto.request.UserCreationRequest;
 import com.jpay.core_banking.dto.request.UserUpdateRequest;
 import com.jpay.core_banking.dto.response.ApiResponse;
@@ -40,10 +41,12 @@ public class UserService {
     WalletRepository walletRepository;
     BudgetRepository budgetRepository;
     CategoryRepository categoryRepository;
+    SecurityUtils securityUtils;
 
     @Transactional
     public UserResponse createUser(UserCreationRequest request) {
-        if(userRepository.existsByUsername(request.getUsername())) throw new AppException(ErrorCode.USER_EXISTED_ERROR);
+        if (userRepository.existsByUsername(request.getUsername()))
+            throw new AppException(ErrorCode.USER_EXISTED_ERROR);
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRoles(Role.getDefaultRoles());
@@ -56,41 +59,40 @@ public class UserService {
                 .build();
         walletRepository.save(wallet);
 
-//        Tạo category mặc định
-        Category defaultCategory = categoryRepository.save(Category.builder()
+        // Tạo category mặc định
+        Category defaultCategory = Category.builder()
                 .isDefault(true)
                 .categoryName(CategoryService.DEFAULT_CATEGORY_NAME)
                 .user(user)
-                .build());
+                .build();
 
-//        Tạo budget mặc định
-        budgetRepository.save(Budget.builder()
-                .category(defaultCategory)
+        // Tạo budget mặc định
+        Budget defaultBudget = Budget.builder()
                 .amount(0L) // không giới hạn hạn mưcs
                 .spentAmount(0L)
                 .month(LocalDate.now().getMonthValue())
                 .year(LocalDate.now().getYear())
-                .build());
+                .build();
 
+        defaultCategory.addBudget(defaultBudget);
+        categoryRepository.save(defaultCategory);
 
         return userMapper.toUserResponse(user);
     }
-    public UserResponse updateUser(String id, UserUpdateRequest request){
-        User user = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR)) ;
+
+    public UserResponse updateUser(String id, UserUpdateRequest request) {
+        User user = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
 
         userMapper.updateUser(user, request);
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    public List<UserResponse> getAllUser(){
+    public List<UserResponse> getAllUser() {
         return userRepository.findAll().stream().map(userMapper::toUserResponse).toList();
     }
 
-    public UserResponse myInfo(){
-        var context = SecurityContextHolder.getContext();
-        String name = context.getAuthentication().getName();
-
-        User user = userRepository.findByUsername(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED_ERROR));
+    public UserResponse myInfo() {
+        User user = securityUtils.getCurrentUser();
         return userMapper.toUserResponse(user);
     }
 }
