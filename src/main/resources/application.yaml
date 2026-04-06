@@ -23,11 +23,18 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true # Hiện SQL để debug
+    show-sql: true # Hiện SQL
     properties:
       hibernate:
         format_sql: true
+        highlight_sql: true
 jwt:
   signerKey: "54321678901234567890123456789012"
   valid-duration: 3600
   refreshable-duration: 2592000
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
